@@ -1,0 +1,13 @@
+{
+	Label: Shell
+	Path: /bin/ls
+}
+{
+	Label: roscore
+	Path: roscore
+}
+
+{
+	Label: ls
+	Path: ls
+}
