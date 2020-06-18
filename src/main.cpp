@@ -78,6 +78,7 @@ struct Button
 {
     char *label;
     char *path;
+    bool keep_open;
 };
 
 bool isWhitespace(char c)
@@ -115,6 +116,7 @@ std::vector<Button> ParseFile(const char *filename)
 		parsing_button = true;
 		button.label = 0;
 		button.path = 0;
+		button.keep_open = true;
 	    }break;
 	    case '}':
 	    {
@@ -127,7 +129,7 @@ std::vector<Button> ParseFile(const char *filename)
 		if(strncmp(cur, "Label", 5) == 0)
 		{
 		    cur += 5;
-		    while(isWhitespace(*cur)){++cur;}
+		    while(isWhitespace(*cur)){++cur;} // TODO: refactor
 		    if(*cur != ':')
 		    {
 			printf("Expected ':' got '%c'. Skipping line.\n", *cur);
@@ -146,7 +148,7 @@ std::vector<Button> ParseFile(const char *filename)
 		else if(strncmp(cur, "Path", 4) == 0)
 		{
 		    cur += 4;
-		    while(isWhitespace(*cur)){++cur;}
+		    while(isWhitespace(*cur)){++cur;} // TODO: refactor
 		    if(*cur != ':')
 		    {
 			printf("Expected ':' got '%c'. Skipping line.\n", *cur);
@@ -155,14 +157,43 @@ std::vector<Button> ParseFile(const char *filename)
 		    ++cur;
 		    while(isWhitespace(*cur)){++cur;}
 
-		    const char *extra = "; exec bash";
+		    //const char *extra = "; exec bash";
 		    char *start = cur;
 		    while(*cur != '\n'){++cur;}
 		    size_t length = cur - start;
-		    button.path = (char *)malloc(length + 13);
+		    button.path = (char *)malloc(length); // + 13);
 		    memcpy(button.path, start, length);
-		    memcpy(button.path+length, extra, 12);
-		    button.path[length+12] = 0; // TODO: this is not needed
+		    //memcpy(button.path+length, extra, 12);
+		    button.path[length] = 0; // +12] = 0; // TODO: this is not needed
+		}
+		else if(strncmp(cur, "KeepOpen", 8) == 0)
+		{
+		    cur += 8;
+		    while(isWhitespace(*cur)){++cur;} // TODO: refactor
+		    if(*cur != ':')
+		    {
+			printf("Expected ':' got '%c'. Skipping line.\n", *cur);
+			while(*cur != '\n') {++cur;};
+		    }
+		    ++cur;
+		    while(isWhitespace(*cur)){++cur;}
+
+		    if(strncmp(cur, "true", 4) == 0)
+		    {
+			cur+=4;
+			button.keep_open = true;
+		    }
+		    else if(strncmp(cur, "false", 5) == 0)
+		    {
+			cur+=5;
+			button.keep_open = false;
+		    }
+		    else
+		    {
+			char *start = cur;
+			while(*cur != '\n') {++cur;};
+			printf("Expected 'true' or 'false' got '%.*s'. Skipping line.\n", (int)(cur-start), start);		
+		    }
 		}
 		else
 		{
@@ -183,12 +214,17 @@ void appenToFile(const char *filename, Button button)
     if(file)
     {
 	fputs("\n{\n", file);
+
 	fputs("\tLabel: ", file);
 	fputs(button.label, file);
 	fputc('\n', file);
 	fputs("\tPath: ", file);
 	fputs(button.path, file);
-	fputs("\n}\n", file);
+	fputc('\n', file);
+	if(!button.keep_open)
+	    fputs("\tKeepOpen: false\n", file);
+	
+	fputs("}\n", file);
 	fclose(file);
     }    
 }
@@ -204,10 +240,12 @@ Button copyPersistentButton(Button button)
     memcpy(result.label, button.label, label_len);
 
     size_t path_len = strlen(button.path);
-    result.path = (char *)malloc(path_len + 13);
+    result.path = (char *)malloc(path_len +1); // + 13);
     memcpy(result.path, button.path, path_len);
-    memcpy(result.path+path_len, extra, 13);		    
-    
+    result.path[path_len] = 0;
+    //memcpy(result.path+path_len, extra, 13);		    
+
+    result.keep_open = button.keep_open;
     return result;
 }
 
@@ -223,6 +261,7 @@ int main(int, char**)
     // Note: buffers for the add button popup dialog
     char add_button_label[32] = "";
     char add_button_path[64] = "";
+    bool add_button_keep_open = true;
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -251,10 +290,11 @@ int main(int, char**)
 	    {
 		ImGui::InputText("Label", add_button_label, 32);
 		ImGui::InputText("Path", add_button_path, 64);
+		ImGui::Checkbox("KeepOpen", &add_button_keep_open);
 		
 		if(ImGui::Button("Add"))
 		{
-		    Button button = {add_button_label, add_button_path};
+		    Button button = {add_button_label, add_button_path, add_button_keep_open};
 		    appenToFile(CONFIG_FILE, button);
 		    buttons.push_back(copyPersistentButton(button)); 
 		    open_add_button_popup = false;
@@ -279,7 +319,22 @@ int main(int, char**)
 		    {
 			pid_t pid = fork();
 			if(pid)
-			    execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", button.path, 0);
+			{
+			    if(button.keep_open)
+			    {
+				    const char *extra = "; exec bash";
+    
+				    size_t path_len = strlen(button.path);
+				    char *cmd = (char *)malloc(path_len + 13);
+				    memcpy(cmd, button.path, path_len);
+				    memcpy(cmd+path_len, extra, 13);		    
+				    execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd, 0);
+				    free(cmd);
+			    }
+			    {
+				execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", button.path, 0);
+			    }
+			}
 		    }
 		    
 		    float current_button_max_x = ImGui::GetItemRectMax().x;
