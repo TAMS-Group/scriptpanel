@@ -80,11 +80,13 @@ struct Button
 {
     std::string label;
     std::string path;
+    std::string tooltip;
     bool keep_open;
 };
 
 std::string default_label = "NO_LABLE";
 std::string default_path = "/bin/bash";
+std::string default_tooltip = "";
 std::vector<Button> ParseFile(const char *filename)
 {
     std::vector<Button> result;
@@ -92,11 +94,13 @@ std::vector<Button> ParseFile(const char *filename)
 
     for(int i = 0; i < root.size(); i++)
     {
-        Button button = {default_label, default_path, false};
+        Button button = {default_label, default_path,default_tooltip, false};
         if(root[i]["Label"])
             button.label = root[i]["Label"].as<std::string>();
         if(root[i]["Path"])
             button.path = root[i]["Path"].as<std::string>();
+        if(root[i]["ToolTip"])
+            button.tooltip = root[i]["ToolTip"].as<std::string>();
         if(root[i]["KeepOpen"])
             button.keep_open = root[i]["KeepOpen"].as<bool>();
         result.push_back(button);
@@ -170,6 +174,12 @@ int main(int, char**)
                             }
                         }
                     }
+                    if(ImGui::IsItemHovered())
+                    {
+                        if(button.tooltip != "")
+                            ImGui::SetTooltip(button.tooltip.c_str());
+                    }
+                    
                     ImGui::PopStyleColor();
 		    
                     float current_button_max_x = ImGui::GetItemRectMax().x;

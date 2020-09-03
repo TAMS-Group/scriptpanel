@@ -1,0 +1,17 @@
+[
+    {
+        Label: "Shell",
+        Path: "/bin/ls",
+        ToolTip: "Long text describing the functionality."
+    },
+    {
+        Label: "ls",
+        Path: "/bin/ls",
+        KeepOpen: true
+    },
+    {
+        Label: "Long button text\n with linebreak",
+        Path: "/bin/ls"
+    }
+
+]
