@@ -105,6 +105,25 @@ std::vector<Button> ParseFile(const char *filename)
     return result;
 }
 
+// TODO: better random function
+int getButtonColor(Button button)
+{
+    const char *buffer = button.label.c_str();
+    int seed = buffer[0];
+    if(buffer[0] && buffer[1] && buffer[2] && buffer[3])
+        seed = *(int *)buffer;
+    srand (seed);
+    int r = rand()%255;
+    int g = rand()%255;
+    int b = rand()%255;
+
+    int result = 0xff000000;
+    result |= r;
+    result |= g << 8;
+    result |= b << 16;
+    return result;
+}
+
 #define CONFIG_FILE "../config/script_panel.yaml"
 int main(int, char**)
 {
@@ -134,6 +153,7 @@ int main(int, char**)
                 for(auto &button : buttons)
                 {
                     ImGui::PushID(button_id);
+                    ImGui::PushStyleColor(ImGuiCol_Button, getButtonColor(button));
                     if(ImGui::Button(button.label.c_str(), {125,125}))
                     {
                         pid_t pid = fork();
@@ -150,6 +170,7 @@ int main(int, char**)
                             }
                         }
                     }
+                    ImGui::PopStyleColor();
 		    
                     float current_button_max_x = ImGui::GetItemRectMax().x;
                     float next_button_max_x    = current_button_max_x + style.ItemSpacing.x + 100;
