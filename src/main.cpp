@@ -30,7 +30,7 @@ GLFWwindow *initGlfwAndImgui()
 {
     glfwSetErrorCallback(glfwErrorCallback);
     if (!glfwInit())
-	exit(1);
+	    exit(1);
 
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -38,7 +38,7 @@ GLFWwindow *initGlfwAndImgui()
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Pr2 Scripts controlpanel", NULL, NULL);
     if (window == NULL)
-	exit(1);
+	    exit(1);
     
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -117,9 +117,9 @@ int getButtonColor(Button button)
     if(buffer[0] && buffer[1] && buffer[2] && buffer[3])
         seed = *(int *)buffer;
     srand (seed);
-    int r = rand()%255;
-    int g = rand()%255;
-    int b = rand()%255;
+    int r = (rand()%64) + 64;
+    int g = (rand()%64) + 64;
+    int b = (rand()%64) + 64;
 
     int result = 0xff000000;
     result |= r;
@@ -128,7 +128,7 @@ int getButtonColor(Button button)
     return result;
 }
 
-#define CONFIG_FILE "../config/script_panel.yaml"
+#define CONFIG_FILE "/home/pr2admin/pr2_script_panel/config/script_panel.yaml"
 int main(int, char**)
 {
     std::vector<Button> buttons = ParseFile(CONFIG_FILE);
@@ -160,8 +160,9 @@ int main(int, char**)
                     ImGui::PushStyleColor(ImGuiCol_Button, getButtonColor(button));
                     if(ImGui::Button(button.label.c_str(), {125,125}))
                     {
+                        glfwMakeContextCurrent(NULL);
                         pid_t pid = fork();
-                        if(pid)
+                        if(pid==0)
                         {
                             if(button.keep_open)
                             {
@@ -170,9 +171,11 @@ int main(int, char**)
                                 execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), 0);
                             }
                             {
-                                execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", button.path.c_str(), 0);
+                                //execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", button.path.c_str(), 0);
+                                execl(button.path.c_str(), 0);
                             }
                         }
+                        glfwMakeContextCurrent(window);
                     }
                     if(ImGui::IsItemHovered())
                     {
