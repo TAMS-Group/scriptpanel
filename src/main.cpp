@@ -109,17 +109,14 @@ std::vector<Button> ParseFile(const char *filename)
     return result;
 }
 
-// TODO: better random function
 int getButtonColor(Button button)
 {
     const char *buffer = button.label.c_str();
-    int seed = buffer[0];
-    if(buffer[0] && buffer[1] && buffer[2] && buffer[3])
-        seed = *(int *)buffer;
-    srand (seed);
-    int r = (rand()%64) + 64;
-    int g = (rand()%64) + 64;
-    int b = (rand()%64) + 64;
+    size_t seed = std::hash<std::string>{}(button.label);
+    srand(seed);
+    int r = (rand()%128) + 16;
+    int g = (rand()%128) + 16;
+    int b = (rand()%128) + 16;
 
     int result = 0xff000000;
     result |= r;
@@ -128,7 +125,7 @@ int getButtonColor(Button button)
     return result;
 }
 
-#define CONFIG_FILE "/home/pr2admin/pr2_script_panel/config/script_panel.yaml"
+#define CONFIG_FILE "/home/jonas/code/script_panel/config/script_panel.yaml"
 int main(int, char**)
 {
     std::vector<Button> buttons = ParseFile(CONFIG_FILE);
@@ -168,11 +165,11 @@ int main(int, char**)
                             {
                                 std::string extra = "; exec bash";
                                 std::string cmd = button.path + extra;
-                                execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), 0);
+                                execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
                             }
                             {
-                                //execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", button.path.c_str(), 0);
-                                execl(button.path.c_str(), 0);
+                                //execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", button.path.c_str(), NULL);
+                                execl(button.path.c_str(), button.path.c_str(), NULL);
                             }
                         }
                         glfwMakeContextCurrent(window);
@@ -180,7 +177,7 @@ int main(int, char**)
                     if(ImGui::IsItemHovered())
                     {
                         if(button.tooltip != "")
-                            ImGui::SetTooltip(button.tooltip.c_str());
+                            ImGui::SetTooltip("%s", button.tooltip.c_str());
                     }
                     
                     ImGui::PopStyleColor();
