@@ -1,12 +1,13 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <vector>
 #include <yaml-cpp/yaml.h>
 #include <fstream>
+#include <sys/stat.h>
 
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
@@ -26,7 +27,7 @@ void cleanupGlfwAndImgui(GLFWwindow* window)
     glfwTerminate();
 }
 
-GLFWwindow *initGlfwAndImgui()
+GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name)
 {
     glfwSetErrorCallback(glfwErrorCallback);
     if (!glfwInit())
@@ -36,7 +37,7 @@ GLFWwindow *initGlfwAndImgui()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Pr2 Scripts controlpanel", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(width, height, window_name, NULL, NULL);
     if (window == NULL)
 	    exit(1);
     
@@ -53,10 +54,15 @@ GLFWwindow *initGlfwAndImgui()
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;          
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.IniFilename = 0;
     ImGui::StyleColorsClassic();
 
+    // bigger font size
+    ImFontConfig config;
+    config.SizePixels = 14;
+    ImFont *font = io.Fonts->AddFontDefault(&config);
+    
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
     return window;
@@ -125,14 +131,86 @@ int getButtonColor(Button button)
     return result;
 }
 
-#define CONFIG_FILE "/home/jonas/code/script_panel/config/script_panel.yaml"
+#define CONFIG_FOLDER ".config/scriptpanel"
+#define SCRIPTS_FILE "scripts/scriptpanel.yaml"
+struct Config
+{
+    std::string script_file;
+    int num_buttons_per_row;
+    int button_width;
+    int button_height;
+};
+    
+Config loadOrCreateConfigIfMissing()
+{
+    struct stat st = {0};
+    const char* homedir = getenv("HOME");
+    std::string config_folder = std::string(homedir) + "/" + CONFIG_FOLDER;
+    if(stat(config_folder.c_str(), &st) == -1)
+    {
+        bool success = mkdir(config_folder.c_str(),0700);
+        if(success == -1)
+            printf("Could not create the directory %s\n", config_folder.c_str());
+        else
+            printf("Created config folder at %s\n", config_folder.c_str());
+    }
+
+    std::ifstream ifs(config_folder+"/config.yaml");
+    Config config = {std::string(homedir) + "/" + SCRIPTS_FILE, 5, 125, 60};
+
+    // Writeout default config if file does not exist
+    if(!ifs.good())
+    {
+        std::ofstream ofs;
+        ofs.open(config_folder+"/config.yaml");
+        YAML::Emitter out(ofs);
+        out << YAML::BeginMap;
+        out << YAML::Key << "ScriptFile";
+        out << YAML::Value << config.script_file;
+        out << YAML::Key << "NumButtonsPerRow";
+        out << YAML::Value << config.num_buttons_per_row;
+        out << YAML::Key << "ButtonWidth";
+        out << YAML::Value << config.button_width;
+        out << YAML::Key << "ButtonHeight";
+        out << YAML::Value << config.button_height;
+        out << YAML::EndMap;
+        ofs.close();
+    }
+    else
+    {
+        YAML::Node root = YAML::Load(ifs);
+        if(root["ScriptFile"])
+            config.script_file = root["ScriptFile"].as<std::string>();
+        
+        if(root["NumButtonsPerRow"])
+            config.num_buttons_per_row = root["NumButtonsPerRow"].as<int>();
+        
+        if(root["ButtonWidth"])
+            config.button_width = root["ButtonWidth"].as<int>();
+        
+        if(root["ButtonHeight"])
+            config.button_height = root["ButtonHeight"].as<int>();
+    }
+    ifs.close();
+    return config;
+}
+
 int main(int, char**)
 {
-    std::vector<Button> buttons = ParseFile(CONFIG_FILE);
-    
-    GLFWwindow *window = initGlfwAndImgui();
+    Config cfg = loadOrCreateConfigIfMissing();
+    std::vector<Button> buttons = ParseFile(cfg.script_file.c_str());
+    ImVec2 button_size = {(float)cfg.button_width, (float)cfg.button_height};
+
+    GLFWwindow *window = initGlfwAndImgui(800, 600, "Scriptpanel");
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     ImGuiStyle& style = ImGui::GetStyle();
+    
+    ImVec2 spacing = style.ItemSpacing;
+    ImVec2 padding = style.WindowPadding;
+    int width  = (button_size.x + spacing.x)*cfg.num_buttons_per_row + padding.x + 5;
+    int height = (button_size.y + spacing.y)*ceil(buttons.size()/(float)cfg.num_buttons_per_row) + padding.y + 5;
+    glfwSetWindowSize(window, width, height); 
+    glfwSetWindowPos(window, 0, 0);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -144,7 +222,7 @@ int main(int, char**)
 
         {
             ImGuiViewport *viewport = ImGui::GetWindowViewport();
-            ImGuiID id = ImGui::DockSpaceOverViewport(viewport);
+            ImGuiID id = ImGui::DockSpaceOverViewport(viewport, ImGuiDockNodeFlags_AutoHideTabBar);
             ImGui::SetNextWindowDockID(id);
 
             if(ImGui::Begin("Controlpanel"))
@@ -155,7 +233,7 @@ int main(int, char**)
                 {
                     ImGui::PushID(button_id);
                     ImGui::PushStyleColor(ImGuiCol_Button, getButtonColor(button));
-                    if(ImGui::Button(button.label.c_str(), {125,125}))
+                    if(ImGui::Button(button.label.c_str(), button_size))
                     {
                         glfwMakeContextCurrent(NULL);
                         pid_t pid = fork();
@@ -168,7 +246,6 @@ int main(int, char**)
                                 execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
                             }
                             {
-                                //execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", button.path.c_str(), NULL);
                                 execl(button.path.c_str(), button.path.c_str(), NULL);
                             }
                         }
