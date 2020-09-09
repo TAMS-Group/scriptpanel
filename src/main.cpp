@@ -27,7 +27,7 @@ void cleanupGlfwAndImgui(GLFWwindow* window)
     glfwTerminate();
 }
 
-GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name)
+GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, const char *font_path)
 {
     glfwSetErrorCallback(glfwErrorCallback);
     if (!glfwInit())
@@ -59,9 +59,18 @@ GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name)
     ImGui::StyleColorsClassic();
 
     // bigger font size
-    ImFontConfig config;
-    config.SizePixels = 14;
-    ImFont *font = io.Fonts->AddFontDefault(&config);
+    std::ifstream font_file(font_path);
+    if(font_file.good())
+    {
+        ImFont *font = io.Fonts->AddFontFromFileTTF(font_path, 18);
+    }
+    else
+    {
+        ImFontConfig config;
+        config.SizePixels = 16;
+        ImFont *font = io.Fonts->AddFontDefault(&config);
+    }
+    font_file.close();
     
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
@@ -133,12 +142,14 @@ int getButtonColor(Button button)
 
 #define CONFIG_FOLDER ".config/scriptpanel"
 #define SCRIPTS_FILE "scripts/scriptpanel.yaml"
+#define DEFAULT_FONT "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf"
 struct Config
 {
     std::string script_file;
     int num_buttons_per_row;
     int button_width;
     int button_height;
+    std::string font_path;
 };
     
 Config loadOrCreateConfigIfMissing()
@@ -156,7 +167,7 @@ Config loadOrCreateConfigIfMissing()
     }
 
     std::ifstream ifs(config_folder+"/config.yaml");
-    Config config = {std::string(homedir) + "/" + SCRIPTS_FILE, 5, 125, 60};
+    Config config = {std::string(homedir) + "/" + SCRIPTS_FILE, 5, 125, 60, DEFAULT_FONT};
 
     // Writeout default config if file does not exist
     if(!ifs.good())
@@ -173,6 +184,8 @@ Config loadOrCreateConfigIfMissing()
         out << YAML::Value << config.button_width;
         out << YAML::Key << "ButtonHeight";
         out << YAML::Value << config.button_height;
+        out << YAML::Key << "FontPath";
+        out << YAML::Value << config.font_path;
         out << YAML::EndMap;
         ofs.close();
     }
@@ -190,6 +203,9 @@ Config loadOrCreateConfigIfMissing()
         
         if(root["ButtonHeight"])
             config.button_height = root["ButtonHeight"].as<int>();
+
+        if(root["FontPath"])
+            config.font_path = root["FontPath"].as<std::string>();
     }
     ifs.close();
     return config;
@@ -201,7 +217,7 @@ int main(int, char**)
     std::vector<Button> buttons = ParseFile(cfg.script_file.c_str());
     ImVec2 button_size = {(float)cfg.button_width, (float)cfg.button_height};
 
-    GLFWwindow *window = initGlfwAndImgui(800, 600, "Scriptpanel");
+    GLFWwindow *window = initGlfwAndImgui(800, 600, "Scriptpanel", cfg.font_path.c_str());
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     ImGuiStyle& style = ImGui::GetStyle();
     
@@ -223,7 +239,12 @@ int main(int, char**)
         {
             ImGuiViewport *viewport = ImGui::GetWindowViewport();
             ImGuiID id = ImGui::DockSpaceOverViewport(viewport, ImGuiDockNodeFlags_AutoHideTabBar);
+
+            // NOTE: remove tab bar
             ImGui::SetNextWindowDockID(id);
+            ImGuiWindowClass wc;
+            wc.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+            ImGui::SetNextWindowClass(&wc);
 
             if(ImGui::Begin("Controlpanel"))
             {
