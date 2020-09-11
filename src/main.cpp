@@ -1,4 +1,5 @@
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
@@ -62,12 +63,12 @@ GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, con
     std::ifstream font_file(font_path);
     if(font_file.good())
     {
-        ImFont *font = io.Fonts->AddFontFromFileTTF(font_path, 18);
+        ImFont *font = io.Fonts->AddFontFromFileTTF(font_path, 15);
     }
     else
     {
         ImFontConfig config;
-        config.SizePixels = 16;
+        config.SizePixels = 15;
         ImFont *font = io.Fonts->AddFontDefault(&config);
     }
     font_file.close();
@@ -105,22 +106,28 @@ std::string default_tooltip = "";
 std::vector<Button> ParseFile(const char *filename)
 {
     std::vector<Button> result;
-    YAML::Node root = YAML::LoadFile(filename);
-
-    for(int i = 0; i < root.size(); i++)
+    try
     {
-        Button button = {default_label, default_path,default_tooltip, false};
-        if(root[i]["Label"])
-            button.label = root[i]["Label"].as<std::string>();
-        if(root[i]["Path"])
-            button.path = root[i]["Path"].as<std::string>();
-        if(root[i]["ToolTip"])
-            button.tooltip = root[i]["ToolTip"].as<std::string>();
-        if(root[i]["KeepOpen"])
-            button.keep_open = root[i]["KeepOpen"].as<bool>();
-        result.push_back(button);
+        YAML::Node root = YAML::LoadFile(filename);
+
+        for(int i = 0; i < root.size(); i++)
+        {
+            Button button = {default_label, default_path,default_tooltip, false};
+            if(root[i]["Label"])
+                button.label = root[i]["Label"].as<std::string>();
+            if(root[i]["Path"])
+                button.path = root[i]["Path"].as<std::string>();
+            if(root[i]["ToolTip"])
+                button.tooltip = root[i]["ToolTip"].as<std::string>();
+            if(root[i]["KeepOpen"])
+                button.keep_open = root[i]["KeepOpen"].as<bool>();
+            result.push_back(button);
+        }
     }
-    
+    catch(...)
+    {
+        printf("Could not open or read %s.\n", filename);
+    }
     return result;
 }
 
@@ -166,14 +173,16 @@ Config loadOrCreateConfigIfMissing()
             printf("Created config folder at %s\n", config_folder.c_str());
     }
 
-    std::ifstream ifs(config_folder+"/config.yaml");
+    std::string config_file_path = config_folder+"/config.yaml";
+    std::ifstream ifs(config_file_path);
     Config config = {std::string(homedir) + "/" + SCRIPTS_FILE, 5, 125, 60, DEFAULT_FONT};
 
     // Writeout default config if file does not exist
     if(!ifs.good())
     {
+        printf("Creating default config file %s.\n Please change the paths to match your system.\n", config_file_path.c_str());
         std::ofstream ofs;
-        ofs.open(config_folder+"/config.yaml");
+        ofs.open(config_file_path);
         YAML::Emitter out(ofs);
         out << YAML::BeginMap;
         out << YAML::Key << "ScriptFile";
@@ -191,21 +200,18 @@ Config loadOrCreateConfigIfMissing()
     }
     else
     {
+        printf("Reading config from %s\n", config_file_path.c_str());
         YAML::Node root = YAML::Load(ifs);
         if(root["ScriptFile"])
-            config.script_file = root["ScriptFile"].as<std::string>();
-        
+          config.script_file = root["ScriptFile"].as<std::string>();
         if(root["NumButtonsPerRow"])
-            config.num_buttons_per_row = root["NumButtonsPerRow"].as<int>();
-        
+          config.num_buttons_per_row = root["NumButtonsPerRow"].as<int>();
         if(root["ButtonWidth"])
-            config.button_width = root["ButtonWidth"].as<int>();
-        
+          config.button_width = root["ButtonWidth"].as<int>();
         if(root["ButtonHeight"])
-            config.button_height = root["ButtonHeight"].as<int>();
-
+          config.button_height = root["ButtonHeight"].as<int>();
         if(root["FontPath"])
-            config.font_path = root["FontPath"].as<std::string>();
+          config.font_path = root["FontPath"].as<std::string>();
     }
     ifs.close();
     return config;
