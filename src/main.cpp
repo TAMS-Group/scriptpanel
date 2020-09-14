@@ -1,3 +1,7 @@
+#ifndef IMGUI_DEFINE_MATH_OPERATORS
+#define IMGUI_DEFINE_MATH_OPERATORS
+#endif
+
 #include "imgui.h"
 #include "imgui_internal.h"
 #include "imgui_impl_glfw.h"
@@ -8,10 +12,11 @@
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 #include <fstream>
-#include <sys/stat.h>
 
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
+
+#include "wrap_string.cpp"
 
 static void glfwErrorCallback(int error, const char* description)
 {
@@ -92,6 +97,15 @@ void renderAndSwapBuffers(GLFWwindow *window, ImVec4 clear_color)
     glfwSwapBuffers(window);
 }
 
+#define DEFAULT_FONT "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf"
+struct Config
+{
+    int num_buttons_per_row;
+    int button_width;
+    int button_height;
+    std::string font_path;
+};
+    
 struct Button
 {
     std::string label;
@@ -100,41 +114,84 @@ struct Button
     bool keep_open;
 };
 
+struct ParseFileResult
+{
+    std::map<std::string,std::vector<Button>> groups;
+    Config config;
+    int num_buttons;
+};
+
 std::string default_label = "NO_LABLE";
 std::string default_path = "/bin/bash";
 std::string default_tooltip = "";
-std::vector<Button> ParseFile(const char *filename)
+ParseFileResult ParseFile(std::string filename)
 {
-    std::vector<Button> result;
+    ParseFileResult result;
+    Config config = {5, 125, 60, DEFAULT_FONT};
+    std::map<std::string,std::vector<Button>> groups;
+
+    int num_buttons = 0;
     try
     {
         YAML::Node root = YAML::LoadFile(filename);
-
-        for(int i = 0; i < root.size(); i++)
+        if(root["config"])
         {
-            Button button = {default_label, default_path,default_tooltip, false};
-            if(root[i]["Label"])
-                button.label = root[i]["Label"].as<std::string>();
-            if(root[i]["Path"])
-                button.path = root[i]["Path"].as<std::string>();
-            if(root[i]["ToolTip"])
-                button.tooltip = root[i]["ToolTip"].as<std::string>();
-            if(root[i]["KeepOpen"])
-                button.keep_open = root[i]["KeepOpen"].as<bool>();
-            result.push_back(button);
+            YAML::Node config_node = root["config"];
+
+            if(config_node["num_buttons_per_row"])
+                config.num_buttons_per_row = config_node["num_buttons_per_row"].as<int>();
+            if(config_node["button_width"])
+                config.button_width = config_node["button_width"].as<int>();
+            if(config_node["button_height"])
+                config.button_height = config_node["button_height"].as<int>();
+            if(config_node["font_path"])
+                config.font_path = config_node["font_path"].as<std::string>();
+        }
+
+        if(root["scripts"])
+        {
+            YAML::Node scripts = root["scripts"];
+
+            for(int i = 0; i < scripts.size(); i++)
+            {
+                std::string group = "default";
+                Button button = {default_label, default_path,default_tooltip, false};
+                if(scripts[i]["group"])
+                    group = scripts[i]["group"].as<std::string>();
+                if(scripts[i]["label"])
+                    button.label = scripts[i]["label"].as<std::string>();
+                if(scripts[i]["path"])
+                    button.path = scripts[i]["path"].as<std::string>();
+                if(scripts[i]["tooltip"])
+                    button.tooltip = scripts[i]["tooltip"].as<std::string>();
+                if(scripts[i]["terminal"])
+                    button.keep_open = scripts[i]["terminal"].as<bool>();
+
+                groups[group].push_back(button);
+                num_buttons++;
+            }
         }
     }
     catch(...)
     {
-        printf("Could not open or read %s.\n", filename);
+        printf("Could not open or read %s.\n", filename.c_str());
     }
+
+    result.groups = groups;
+    result.config = config;
+    result.num_buttons = num_buttons;
     return result;
 }
 
-int getButtonColor(Button button)
+// TODO: variation in group
+int getButtonColor(Button button, std::string group)
 {
-    const char *buffer = button.label.c_str();
-    size_t seed = std::hash<std::string>{}(button.label);
+    size_t seed = 0;
+    if(group == "default")
+        seed = std::hash<std::string>{}(button.label);
+    else
+        seed = std::hash<std::string>{}(group);
+    
     srand(seed);
     int r = (rand()%128) + 16;
     int g = (rand()%128) + 16;
@@ -144,93 +201,39 @@ int getButtonColor(Button button)
     result |= r;
     result |= g << 8;
     result |= b << 16;
+    
     return result;
 }
 
-#define CONFIG_FOLDER ".config/scriptpanel"
-#define SCRIPTS_FILE "scripts/scriptpanel.yaml"
-#define DEFAULT_FONT "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf"
-struct Config
+int main(int argc, char** argv)
 {
-    std::string script_file;
-    int num_buttons_per_row;
-    int button_width;
-    int button_height;
-    std::string font_path;
-};
-    
-Config loadOrCreateConfigIfMissing()
-{
-    struct stat st = {0};
     const char* homedir = getenv("HOME");
-    std::string config_folder = std::string(homedir) + "/" + CONFIG_FOLDER;
-    if(stat(config_folder.c_str(), &st) == -1)
+    std::string script_folder =  std::string(homedir) + "/scripts";
+    if(argc == 2)
     {
-        bool success = mkdir(config_folder.c_str(),0700);
-        if(success == -1)
-            printf("Could not create the directory %s\n", config_folder.c_str());
-        else
-            printf("Created config folder at %s\n", config_folder.c_str());
-    }
-
-    std::string config_file_path = config_folder+"/config.yaml";
-    std::ifstream ifs(config_file_path);
-    Config config = {std::string(homedir) + "/" + SCRIPTS_FILE, 5, 125, 60, DEFAULT_FONT};
-
-    // Writeout default config if file does not exist
-    if(!ifs.good())
-    {
-        printf("Creating default config file %s.\n Please change the paths to match your system.\n", config_file_path.c_str());
-        std::ofstream ofs;
-        ofs.open(config_file_path);
-        YAML::Emitter out(ofs);
-        out << YAML::BeginMap;
-        out << YAML::Key << "ScriptFile";
-        out << YAML::Value << config.script_file;
-        out << YAML::Key << "NumButtonsPerRow";
-        out << YAML::Value << config.num_buttons_per_row;
-        out << YAML::Key << "ButtonWidth";
-        out << YAML::Value << config.button_width;
-        out << YAML::Key << "ButtonHeight";
-        out << YAML::Value << config.button_height;
-        out << YAML::Key << "FontPath";
-        out << YAML::Value << config.font_path;
-        out << YAML::EndMap;
-        ofs.close();
+        script_folder = argv[1];
     }
     else
     {
-        printf("Reading config from %s\n", config_file_path.c_str());
-        YAML::Node root = YAML::Load(ifs);
-        if(root["ScriptFile"])
-          config.script_file = root["ScriptFile"].as<std::string>();
-        if(root["NumButtonsPerRow"])
-          config.num_buttons_per_row = root["NumButtonsPerRow"].as<int>();
-        if(root["ButtonWidth"])
-          config.button_width = root["ButtonWidth"].as<int>();
-        if(root["ButtonHeight"])
-          config.button_height = root["ButtonHeight"].as<int>();
-        if(root["FontPath"])
-          config.font_path = root["FontPath"].as<std::string>();
+        if(argc != 1)
+        printf("Unexpected number of arguments.\n");
     }
-    ifs.close();
-    return config;
-}
+    
+    ParseFileResult pfr = ParseFile(script_folder + "/scriptpanel.yaml");
+    Config cfg = pfr.config;
+    std::map<std::string,std::vector<Button>> groups = pfr.groups;
 
-int main(int, char**)
-{
-    Config cfg = loadOrCreateConfigIfMissing();
-    std::vector<Button> buttons = ParseFile(cfg.script_file.c_str());
     ImVec2 button_size = {(float)cfg.button_width, (float)cfg.button_height};
 
     GLFWwindow *window = initGlfwAndImgui(800, 600, "Scriptpanel", cfg.font_path.c_str());
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     ImGuiStyle& style = ImGui::GetStyle();
+    style.ButtonTextAlign = {0.0,0.5};
     
     ImVec2 spacing = style.ItemSpacing;
     ImVec2 padding = style.WindowPadding;
     int width  = (button_size.x + spacing.x)*cfg.num_buttons_per_row + padding.x + 5;
-    int height = (button_size.y + spacing.y)*ceil(buttons.size()/(float)cfg.num_buttons_per_row) + padding.y + 5;
+    int height = (button_size.y + spacing.y)*ceil(pfr.num_buttons/(float)cfg.num_buttons_per_row) + padding.y + 5;
     glfwSetWindowSize(window, width, height); 
     glfwSetWindowPos(window, 0, 0);
 
@@ -256,44 +259,47 @@ int main(int, char**)
             {
                 float window_max_x = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
                 int button_id = 0;
-                for(auto &button : buttons)
-                {
-                    ImGui::PushID(button_id);
-                    ImGui::PushStyleColor(ImGuiCol_Button, getButtonColor(button));
-                    if(ImGui::Button(button.label.c_str(), button_size))
+                for(auto &g : groups)
+                {      
+                    for(auto &button : g.second)
                     {
-                        glfwMakeContextCurrent(NULL);
-                        pid_t pid = fork();
-                        if(pid==0)
+                        ImGui::PushID(button_id);
+                        ImGui::PushStyleColor(ImGuiCol_Button, getButtonColor(button, g.first));
+                        if(ImGui::Button(wrappedString(button.label, button_size.x).c_str(), button_size))
                         {
-                            if(button.keep_open)
+                            glfwMakeContextCurrent(NULL);
+                            pid_t pid = fork();
+                            if(pid==0)
                             {
-                                std::string extra = "; exec bash";
-                                std::string cmd = button.path + extra;
-                                execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
+                                if(button.keep_open)
+                                {
+                                    std::string extra = "; exec bash";
+                                    std::string cmd = button.path + extra;
+                                    execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
+                                }
+                                {
+                                    execl(button.path.c_str(), button.path.c_str(), NULL);
+                                }
                             }
-                            {
-                                execl(button.path.c_str(), button.path.c_str(), NULL);
-                            }
+                            glfwMakeContextCurrent(window);
                         }
-                        glfwMakeContextCurrent(window);
-                    }
-                    if(ImGui::IsItemHovered())
-                    {
-                        if(button.tooltip != "")
-                            ImGui::SetTooltip("%s", button.tooltip.c_str());
-                    }
+                        if(ImGui::IsItemHovered())
+                        {
+                            if(button.tooltip != "")
+                                ImGui::SetTooltip("%s", button.tooltip.c_str());
+                        }
                     
-                    ImGui::PopStyleColor();
+                        ImGui::PopStyleColor();
 		    
-                    float current_button_max_x = ImGui::GetItemRectMax().x;
-                    float next_button_max_x    = current_button_max_x + style.ItemSpacing.x + 100;
+                        float current_button_max_x = ImGui::GetItemRectMax().x;
+                        float next_button_max_x    = current_button_max_x + style.ItemSpacing.x + 100;
 		    
-                    ++button_id;
-                    if (button_id < buttons.size() && next_button_max_x < window_max_x)
-                        ImGui::SameLine();
+                        ++button_id;
+                        if (button_id < pfr.num_buttons && next_button_max_x < window_max_x)
+                            ImGui::SameLine();
 		    
-                    ImGui::PopID();
+                        ImGui::PopID();
+                    }
                 }
                 ImGui::End();
             }
