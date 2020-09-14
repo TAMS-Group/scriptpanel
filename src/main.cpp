@@ -255,7 +255,10 @@ void displayButton(Button button, int button_id, std::string group, ImVec2 butto
                    GLFWwindow *window, ImGuiStyle& style, int num_buttons, float window_max_x)
 {
     ImGui::PushID(button_id);
-    ImGui::PushStyleColor(ImGuiCol_Button, getButtonColor(button, group));
+    int color = getButtonColor(button, group);
+    ImGui::PushStyleColor(ImGuiCol_Button, color);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color + 0x00202020);
+    
     if(ImGui::Button(wrappedString(button.label, button_size.x).c_str(), button_size))
     {
         glfwMakeContextCurrent(NULL);
@@ -280,6 +283,7 @@ void displayButton(Button button, int button_id, std::string group, ImVec2 butto
             ImGui::SetTooltip("%s", button.tooltip.c_str());
     }
 
+    ImGui::PopStyleColor();
     ImGui::PopStyleColor();
 
     float current_button_max_x = ImGui::GetItemRectMax().x;

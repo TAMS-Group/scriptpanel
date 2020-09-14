@@ -1,6 +1,8 @@
 // Note: I know that this is totally hacky and not the proper way
 std::string wrappedString(std::string string, double width)
 {
+    ImGuiStyle& style = ImGui::GetStyle();
+
     std::string result = "";
     ImFont *font = ImGui::GetFont();
     const ImFontGlyph *glyph = font->FindGlyph((ImWchar)' ');
@@ -41,7 +43,7 @@ std::string wrappedString(std::string string, double width)
         {
             first = false;
             line += w;
-            total_line_width = word_width;
+            total_line_width = word_width + 2*style.FramePadding.x;
         }
         else
         {
@@ -59,7 +61,7 @@ std::string wrappedString(std::string string, double width)
                 result += line + "\n";
                 line.clear();
                 
-                total_line_width = word_width;
+                total_line_width = word_width + 2*style.FramePadding.x;
                 line += w;
             }
             else
