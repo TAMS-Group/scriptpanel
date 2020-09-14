@@ -195,11 +195,11 @@ ParseFileResult ParseFile(std::string script_folder, std::unordered_set<std::str
                     group = scripts[i]["group"].as<std::string>();
                 if(scripts[i]["label"])
                     button.label = scripts[i]["label"].as<std::string>();
-                if(scripts[i]["path"])
+                if(scripts[i]["script"])
                 {
-                    std::string path = scripts[i]["path"].as<std::string>();
-                    button.path = script_folder + "/" + path;
-                    name_list.erase(path);
+                    std::string filename = scripts[i]["script"].as<std::string>();
+                    button.path = script_folder + "/" + filename;
+                    name_list.erase(filename);
                 }
                 if(scripts[i]["tooltip"])
                     button.tooltip = scripts[i]["tooltip"].as<std::string>();
