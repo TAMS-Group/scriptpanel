@@ -320,7 +320,7 @@ int main(int argc, char** argv)
     GLFWwindow *window = initGlfwAndImgui(800, 600, "Scriptpanel", cfg.font_path.c_str());
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     ImGuiStyle& style = ImGui::GetStyle();
-    style.ButtonTextAlign = {0.0,0.5};
+    style.ButtonTextAlign = {style.FramePadding.x/button_size.x,0.5};
     
     ImVec2 spacing = style.ItemSpacing;
     ImVec2 padding = style.WindowPadding;
