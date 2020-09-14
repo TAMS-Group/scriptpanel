@@ -323,7 +323,6 @@ int main(int argc, char** argv)
     int width  = (button_size.x + spacing.x)*cfg.num_buttons_per_row + padding.x + 5;
     int height = (button_size.y + spacing.y)*ceil(pfr.num_buttons/(float)cfg.num_buttons_per_row) + padding.y + 5;
     glfwSetWindowSize(window, width, height); 
-    glfwSetWindowPos(window, 0, 0);
 
     while (!glfwWindowShouldClose(window))
     {
