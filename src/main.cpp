@@ -10,8 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <yaml-cpp/yaml.h>
 #include <fstream>
+#include <unordered_set>
 
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
@@ -121,15 +124,47 @@ struct ParseFileResult
     int num_buttons;
 };
 
+std::unordered_set<std::string> getFilenames(std::string script_folder)
+{
+    std::unordered_set<std::string> result;
+    DIR *dir = opendir(script_folder.c_str());
+    if(dir)
+    {
+        dirent *entry = readdir(dir);
+        while(entry)
+        {
+            struct stat file_stat;
+            std::string path = script_folder + "/" + entry->d_name;
+            if(stat(path.c_str(), &file_stat)==0)
+            {
+                bool executable = file_stat.st_mode & S_IXUSR;
+                std::string name = entry->d_name;
+                int len = name.size();
+                if((name[len-3] == '.' && name[len-2] == 's' && name[len-1] == 'h') ||
+                    (name[len-3] == '.' && name[len-2] == 'p' && name[len-1] == 'y'))
+                {
+                    result.insert(name);
+                }
+            }
+            entry = readdir(dir);                
+        }
+    }
+    else
+    {
+        printf("Could not open %s\n", script_folder.c_str());
+    }
+    return result;
+}
+
 std::string default_label = "NO_LABLE";
 std::string default_path = "/bin/bash";
 std::string default_tooltip = "";
-ParseFileResult ParseFile(std::string filename)
+ParseFileResult ParseFile(std::string script_folder, std::unordered_set<std::string> name_list)
 {
     ParseFileResult result;
     Config config = {5, 125, 60, DEFAULT_FONT};
     std::map<std::string,std::vector<Button>> groups;
-
+    std::string filename = script_folder  + "/scriptpanel.yaml";
     int num_buttons = 0;
     try
     {
@@ -161,7 +196,10 @@ ParseFileResult ParseFile(std::string filename)
                 if(scripts[i]["label"])
                     button.label = scripts[i]["label"].as<std::string>();
                 if(scripts[i]["path"])
-                    button.path = scripts[i]["path"].as<std::string>();
+                {
+                    button.path = script_folder + "/" + scripts[i]["path"].as<std::string>();
+                    name_list.erase(button.path);
+                }
                 if(scripts[i]["tooltip"])
                     button.tooltip = scripts[i]["tooltip"].as<std::string>();
                 if(scripts[i]["terminal"])
@@ -177,6 +215,13 @@ ParseFileResult ParseFile(std::string filename)
         printf("Could not open or read %s.\n", filename.c_str());
     }
 
+    for(auto &f : name_list)
+    {
+        Button button = {f, script_folder + "/" + f, "", false};
+        groups["default"].push_back(button);
+        num_buttons++;
+    }
+    
     result.groups = groups;
     result.config = config;
     result.num_buttons = num_buttons;
@@ -218,8 +263,9 @@ int main(int argc, char** argv)
         if(argc != 1)
         printf("Unexpected number of arguments.\n");
     }
-    
-    ParseFileResult pfr = ParseFile(script_folder + "/scriptpanel.yaml");
+
+    std::unordered_set<std::string> name_list = getFilenames(script_folder);
+    ParseFileResult pfr = ParseFile(script_folder, name_list);
     Config cfg = pfr.config;
     std::map<std::string,std::vector<Button>> groups = pfr.groups;
 
