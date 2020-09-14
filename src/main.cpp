@@ -251,6 +251,47 @@ int getButtonColor(Button button, std::string group)
     return result;
 }
 
+void displayButton(Button button, int button_id, std::string group, ImVec2 button_size,
+                   GLFWwindow *window, ImGuiStyle& style, int num_buttons, float window_max_x)
+{
+    ImGui::PushID(button_id);
+    ImGui::PushStyleColor(ImGuiCol_Button, getButtonColor(button, group));
+    if(ImGui::Button(wrappedString(button.label, button_size.x).c_str(), button_size))
+    {
+        glfwMakeContextCurrent(NULL);
+        pid_t pid = fork();
+        if(pid==0)
+        {
+            if(button.keep_open)
+            {
+                std::string extra = "; exec bash";
+                std::string cmd = button.path + extra;
+                execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
+            }
+            {
+                execl(button.path.c_str(), button.path.c_str(), NULL);
+            }
+        }
+        glfwMakeContextCurrent(window);
+    }
+    if(ImGui::IsItemHovered())
+    {
+        if(button.tooltip != "")
+            ImGui::SetTooltip("%s", button.tooltip.c_str());
+    }
+
+    ImGui::PopStyleColor();
+
+    float current_button_max_x = ImGui::GetItemRectMax().x;
+    float next_button_max_x    = current_button_max_x + style.ItemSpacing.x + 100;
+
+    ++button_id;
+    if (button_id < num_buttons && next_button_max_x < window_max_x)
+        ImGui::SameLine();
+
+    ImGui::PopID();
+}
+
 int main(int argc, char** argv)
 {
     const char* homedir = getenv("HOME");
@@ -306,47 +347,24 @@ int main(int argc, char** argv)
             {
                 float window_max_x = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
                 int button_id = 0;
+
+                std::vector<Button> default_group;
                 for(auto &g : groups)
-                {      
+                {
+                    if(g.first == "default")
+                    {
+                        default_group = g.second;
+                        continue;
+                    }
                     for(auto &button : g.second)
                     {
-                        ImGui::PushID(button_id);
-                        ImGui::PushStyleColor(ImGuiCol_Button, getButtonColor(button, g.first));
-                        if(ImGui::Button(wrappedString(button.label, button_size.x).c_str(), button_size))
-                        {
-                            glfwMakeContextCurrent(NULL);
-                            pid_t pid = fork();
-                            if(pid==0)
-                            {
-                                if(button.keep_open)
-                                {
-                                    std::string extra = "; exec bash";
-                                    std::string cmd = button.path + extra;
-                                    execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
-                                }
-                                {
-                                    execl(button.path.c_str(), button.path.c_str(), NULL);
-                                }
-                            }
-                            glfwMakeContextCurrent(window);
-                        }
-                        if(ImGui::IsItemHovered())
-                        {
-                            if(button.tooltip != "")
-                                ImGui::SetTooltip("%s", button.tooltip.c_str());
-                        }
-                    
-                        ImGui::PopStyleColor();
-		    
-                        float current_button_max_x = ImGui::GetItemRectMax().x;
-                        float next_button_max_x    = current_button_max_x + style.ItemSpacing.x + 100;
-		    
-                        ++button_id;
-                        if (button_id < pfr.num_buttons && next_button_max_x < window_max_x)
-                            ImGui::SameLine();
-		    
-                        ImGui::PopID();
+                        displayButton(button, button_id, g.first, button_size, window, style, pfr.num_buttons, window_max_x);
                     }
+                }
+                // diplay default group last
+                for(auto &button : default_group)
+                {
+                    displayButton(button, button_id, "default", button_size, window, style, pfr.num_buttons, window_max_x);
                 }
                 ImGui::End();
             }
