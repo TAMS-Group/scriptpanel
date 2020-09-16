@@ -1,0 +1,14 @@
+config:
+    num_buttons_per_row: 2
+    button_width: 140
+    button_height: 60
+    font_path: /usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf
+scripts:
+    - label: Script1
+      script: script1.sh
+      tooltip: This is a tooltip.
+      group: example
+    - label: Script2
+      script: script2.sh
+      tooltip: This is another tooltip.
+      terminal: true
