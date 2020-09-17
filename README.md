@@ -18,12 +18,13 @@ Either use `git clone --recursive` or use `git submodule init; git submodule upd
 mkdir build; cd build; cmake ..; make;
 ```
 Usage: ./scriptpanel path_to_script_folder
+
 To start the example from the build directory: ./scriptpanel ../example_scripts
 
 # scriptpanel.yaml
 
 An example file can be found in example_scripts.
-´´´
+```
 config:                  # global options
     num_buttons_per_row: # number of buttons in each row
     button_height:       # height of each button in pixel
@@ -36,4 +37,4 @@ scripts:                 # options for individual buttons
     tooltip:             # text displayed while hovering over the button
     terminal:            # if set to true, a seperate terminal gets opened to execute the script
     group:               # ensures that buttons in the same group have the same color and are displayed next to each other.
-´´´
+```
