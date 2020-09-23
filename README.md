@@ -8,8 +8,8 @@ A scriptpanel.yaml can be created in the scripts folder to assign different butt
 # Dependencies
  - OpenGL
  - glfw3
- - imgui
  - yaml-cpp
+ - imgui (included as git submodule)
 
 # Build
 ```
