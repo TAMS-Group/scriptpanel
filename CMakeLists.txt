@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 
+project(scriptpanel)
+
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GL3W)
