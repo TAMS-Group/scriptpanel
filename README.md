@@ -9,11 +9,12 @@ A scriptpanel.yaml can be created in the scripts folder to assign different butt
  - OpenGL
  - glfw3
  - yaml-cpp
+ - fontconfig
  - imgui (included as git submodule)
 
 # Build
 ```
-git submodule init 
+git submodule init
 git submodule update
 mkdir build
 cd build
@@ -31,13 +32,13 @@ To start the example from the build directory: `./scriptpanel ../example_scripts
 
 An example file can be found in example_scripts.
 ```
-config:                  # global options
-    num_buttons_per_row: # number of buttons in each row
-    button_height:       # height of each button in pixel
-    button_width:        # width of each button in pixel
-    font_path:           # path to a font used for the button labels
-    
-scripts:                 # options for individual buttons
+config:                    # global options
+    num_buttons_per_row:   # number of buttons in each row
+    button_height:         # height of each button in pixel
+    button_width:          # width of each button in pixel
+    font:                  # fontconfig pattern for a font used for the button labels
+
+scripts:                   # options for individual buttons
     - label:               # text displayed on the button
       script:              # name of the script file. Only paths relative to the script folder are allowed
       tooltip:             # text displayed while hovering over the button

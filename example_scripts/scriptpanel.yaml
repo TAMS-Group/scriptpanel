@@ -2,7 +2,7 @@ config:
     num_buttons_per_row: 2
     button_width: 140
     button_height: 60
-    font_path: /usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf
+    font: LiberationMono:Bold
 scripts:
     - label: Script1
       script: script1.sh

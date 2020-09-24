@@ -12,14 +12,41 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/stat.h>
-#include <yaml-cpp/yaml.h>
 #include <fstream>
 #include <unordered_set>
 
 #include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
+#include <fontconfig/fontconfig.h>
+#include <yaml-cpp/yaml.h>
 
 #include "wrap_string.cpp"
+
+
+std::string getFontPath(std::string pattern)
+{
+    std::string result;
+
+    FcInit();
+    FcConfig  *config     = FcInitLoadConfigAndFonts();
+    FcPattern *fc_pattern = FcNameParse((const FcChar8*)pattern.c_str());
+
+    FcConfigSubstitute(config, fc_pattern, FcMatchPattern);
+    FcDefaultSubstitute(fc_pattern);
+
+    FcChar8* file = 0;
+    FcResult match_result;
+    FcPattern *font = FcFontMatch(config, fc_pattern, &match_result);
+    if (font && (FcPatternGetString(font, FC_FILE, 0, &file) == FcResultMatch))
+        result = std::string((char*)file);
+
+    FcPatternDestroy(font);
+    FcPatternDestroy(fc_pattern);
+    FcConfigDestroy(config);
+    FcFini();
+
+    return result;
+}
 
 static void glfwErrorCallback(int error, const char* description)
 {
@@ -40,7 +67,7 @@ GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, con
 {
     glfwSetErrorCallback(glfwErrorCallback);
     if (!glfwInit())
-	    exit(1);
+        exit(1);
 
     const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -48,8 +75,8 @@ GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, con
 
     GLFWwindow* window = glfwCreateWindow(width, height, window_name, NULL, NULL);
     if (window == NULL)
-	    exit(1);
-    
+        exit(1);
+
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
@@ -80,7 +107,7 @@ GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, con
         ImFont *font = io.Fonts->AddFontDefault(&config);
     }
     font_file.close();
-    
+
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
     return window;
@@ -96,11 +123,11 @@ void renderAndSwapBuffers(GLFWwindow *window, ImVec4 clear_color)
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwMakeContextCurrent(window);
-    
+
     glfwSwapBuffers(window);
 }
 
-#define DEFAULT_FONT "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf"
+#define DEFAULT_FONT_PATTERN "LiberationMono:Bold"
 struct Config
 {
     int num_buttons_per_row;
@@ -108,7 +135,7 @@ struct Config
     int button_height;
     std::string font_path;
 };
-    
+
 struct Button
 {
     std::string label;
@@ -146,7 +173,7 @@ std::unordered_set<std::string> getFilenames(std::string script_folder)
                     result.insert(name);
                 }
             }
-            entry = readdir(dir);                
+            entry = readdir(dir);
         }
     }
     else
@@ -162,7 +189,7 @@ std::string default_tooltip = "";
 ParseFileResult ParseFile(std::string script_folder, std::unordered_set<std::string> name_list)
 {
     ParseFileResult result;
-    Config config = {5, 125, 60, DEFAULT_FONT};
+    Config config = {5, 125, 60, getFontPath(DEFAULT_FONT_PATTERN)};
     std::map<std::string,std::vector<Button>> groups;
     std::string filename = script_folder  + "/scriptpanel.yaml";
     int num_buttons = 0;
@@ -179,8 +206,11 @@ ParseFileResult ParseFile(std::string script_folder, std::unordered_set<std::str
                 config.button_width = config_node["button_width"].as<int>();
             if(config_node["button_height"])
                 config.button_height = config_node["button_height"].as<int>();
-            if(config_node["font_path"])
-                config.font_path = config_node["font_path"].as<std::string>();
+            if(config_node["font"])
+            {
+                std::string font_pattern = config_node["font"].as<std::string>();
+                config.font_path = getFontPath(font_pattern);
+            }
         }
 
         if(root["scripts"])
@@ -222,7 +252,7 @@ ParseFileResult ParseFile(std::string script_folder, std::unordered_set<std::str
         groups["default"].push_back(button);
         num_buttons++;
     }
-    
+
     result.groups = groups;
     result.config = config;
     result.num_buttons = num_buttons;
@@ -237,7 +267,7 @@ int getButtonColor(Button button, std::string group)
         seed = std::hash<std::string>{}(button.label);
     else
         seed = std::hash<std::string>{}(group);
-    
+
     srand(seed);
     int r = (rand()%128) + 16;
     int g = (rand()%128) + 16;
@@ -247,7 +277,7 @@ int getButtonColor(Button button, std::string group)
     result |= r;
     result |= g << 8;
     result |= b << 16;
-    
+
     return result;
 }
 
@@ -321,12 +351,12 @@ int main(int argc, char** argv)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     ImGuiStyle& style = ImGui::GetStyle();
     style.ButtonTextAlign = {style.FramePadding.x/button_size.x,0.5};
-    
+
     ImVec2 spacing = style.ItemSpacing;
     ImVec2 padding = style.WindowPadding;
     int width  = (button_size.x + spacing.x)*cfg.num_buttons_per_row + padding.x + 5;
     int height = (button_size.y + spacing.y)*ceil(pfr.num_buttons/(float)cfg.num_buttons_per_row) + padding.y + 5;
-    glfwSetWindowSize(window, width, height); 
+    glfwSetWindowSize(window, width, height);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -373,7 +403,7 @@ int main(int argc, char** argv)
             }
 
         }
-	
+
         renderAndSwapBuffers(window, clear_color);
     }
 

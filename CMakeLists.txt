@@ -21,5 +21,6 @@ target_link_libraries(scriptpanel
   OpenGL::GL
   glfw
   yaml-cpp
+  fontconfig
   ${CMAKE_DL_LIBS}
 )
