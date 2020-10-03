@@ -22,6 +22,14 @@
 
 #include "wrap_string.cpp"
 
+#define DEFAULT_FONT_PATTERN "LiberationMono:Bold"
+struct Config
+{
+    int num_buttons_per_row;
+    int button_width;
+    int button_height;
+    std::string font_path;
+};
 
 std::string getFontPath(std::string pattern)
 {
@@ -63,7 +71,7 @@ void cleanupGlfwAndImgui(GLFWwindow* window)
     glfwTerminate();
 }
 
-GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, const char *font_path)
+GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, Config *cfg)
 {
     glfwSetErrorCallback(glfwErrorCallback);
     if (!glfwInit())
@@ -94,16 +102,16 @@ GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, con
     io.IniFilename = 0;
     ImGui::StyleColorsClassic();
 
-    // bigger font size
-    std::ifstream font_file(font_path);
+    int font_size = cfg->button_height/4;
+    std::ifstream font_file(cfg->font_path);
     if(font_file.good())
     {
-        ImFont *font = io.Fonts->AddFontFromFileTTF(font_path, 15);
+        ImFont *font = io.Fonts->AddFontFromFileTTF(cfg->font_path.c_str(), font_size);
     }
     else
     {
         ImFontConfig config;
-        config.SizePixels = 15;
+        config.SizePixels = font_size;
         ImFont *font = io.Fonts->AddFontDefault(&config);
     }
     font_file.close();
@@ -126,15 +134,6 @@ void renderAndSwapBuffers(GLFWwindow *window, ImVec4 clear_color)
 
     glfwSwapBuffers(window);
 }
-
-#define DEFAULT_FONT_PATTERN "LiberationMono:Bold"
-struct Config
-{
-    int num_buttons_per_row;
-    int button_width;
-    int button_height;
-    std::string font_path;
-};
 
 struct Button
 {
@@ -347,7 +346,7 @@ int main(int argc, char** argv)
 
     ImVec2 button_size = {(float)cfg.button_width, (float)cfg.button_height};
 
-    GLFWwindow *window = initGlfwAndImgui(800, 600, "Scriptpanel", cfg.font_path.c_str());
+    GLFWwindow *window = initGlfwAndImgui(800, 600, "Scriptpanel", &cfg);
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
     ImGuiStyle& style = ImGui::GetStyle();
     style.ButtonTextAlign = {style.FramePadding.x/button_size.x,0.5};
