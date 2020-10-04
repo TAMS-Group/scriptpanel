@@ -9,6 +9,7 @@ add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GL3W)
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(Fontconfig REQUIRED)
 
 add_executable(scriptpanel
   src/main.cpp imgui/examples/imgui_impl_glfw.cpp imgui/examples/imgui_impl_opengl3.cpp
@@ -21,8 +22,8 @@ target_include_directories(scriptpanel
   )
 target_link_libraries(scriptpanel
   OpenGL::GL
+  Fontconfig::Fontconfig
   glfw
   yaml-cpp
-  fontconfig
   ${CMAKE_DL_LIBS}
 )
