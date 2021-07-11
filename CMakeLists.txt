@@ -43,3 +43,5 @@ target_link_libraries(scriptpanel
   yaml-cpp
   ${CMAKE_DL_LIBS}
 )
+
+install(TARGETS scriptpanel DESTINATION bin)

@@ -14,17 +14,12 @@ A scriptpanel.yaml can be created in the scripts folder to assign different butt
 
 # Build
 ```
-git submodule init
-git submodule update
-mkdir build
-cd build
-cmake ..
-make
+./build.sh
 ```
 
 # Usage
 ```
-./scriptpanel path_to_script_folder
+scriptpanel path_to_script_folder
 ```
 To start the example from the build directory: `./scriptpanel ../example_scripts`
 
