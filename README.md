@@ -3,7 +3,7 @@ A simple button gui for shell scripts.
 It will create a window with one button per executable .sh or .py script in the specified folder(default ~/scripts). Each button's color will be randomized.
 A scriptpanel.yaml can be created in the scripts folder to assign different button labels and to provide tooltips.
 
-![screenshot](window.png "screenshot")
+![screenshot](resources/window.png "screenshot")
 
 # Dependencies
  - OpenGL
@@ -13,9 +13,14 @@ A scriptpanel.yaml can be created in the scripts folder to assign different butt
  - imgui (included as git submodule)
 
 # Build
+
+Build it as a cmake project or use our shorthand script to install to `$HOME/.local`
+
 ```
-./build.sh
+./install.sh
 ```
+
+Beware `$HOME/.local/bin/` might not be in your `$PATH` yet, so to call it from the command line you will have to add it yourself.
 
 # Usage
 ```

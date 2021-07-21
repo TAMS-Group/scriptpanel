@@ -27,6 +27,9 @@ if(NOT TARGET Fontconfig::Fontconfig)
 	target_from_library(Fontconfig::Fontconfig fontconfig)
 endif()
 
+set(BINFOLDER ${CMAKE_INSTALL_PREFIX}/bin)
+configure_file(resources/scriptpanel.desktop.in scriptpanel.desktop)
+
 add_executable(scriptpanel
   src/main.cpp imgui/examples/imgui_impl_glfw.cpp imgui/examples/imgui_impl_opengl3.cpp
   imgui/examples/libs/gl3w/GL/gl3w.c imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp
@@ -44,4 +47,6 @@ target_link_libraries(scriptpanel
   ${CMAKE_DL_LIBS}
 )
 
-install(TARGETS scriptpanel DESTINATION bin)
+install(TARGETS scriptpanel DESTINATION ${BINFOLDER})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/scriptpanel.desktop DESTINATION share/applications)
+install(FILES resources/scriptpanel.svg DESTINATION share/icons/hicolor/scalable/apps)
