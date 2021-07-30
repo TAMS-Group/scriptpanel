@@ -7,8 +7,8 @@ A scriptpanel.yaml can be created in the scripts folder to assign different butt
 
 # Dependencies
  - OpenGL
- - glfw3
- - yaml-cpp
+ - glfw3 (`sudo apt install libglfw3-dev`)
+ - yaml-cpp (`sudo apt install libyaml-cpp-dev`)
  - fontconfig
  - imgui (included as git submodule)
 
