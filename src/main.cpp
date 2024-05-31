@@ -300,8 +300,9 @@ void displayButton(Button button, int button_id, std::string group, ImVec2 butto
                 std::string cmd = button.path + extra;
                 execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
             }
+            else
             {
-                execl(button.path.c_str(), button.path.c_str(), NULL);
+                execl("/bin/bash", "bash", "-c", button.path.c_str(), NULL);
             }
         }
         glfwMakeContextCurrent(window);
