@@ -304,6 +304,7 @@ void displayButton(Button button, int button_id, std::string group, ImVec2 butto
             {
                 execl("/bin/bash", "bash", "-c", button.path.c_str(), NULL);
             }
+            exit(1); // only reached if exec failed above
         }
         glfwMakeContextCurrent(window);
     }
