@@ -296,13 +296,11 @@ void displayButton(Button button, int button_id, std::string group, ImVec2 butto
         {
             if(button.keep_open)
             {
-                std::string extra = "; exec bash";
-                std::string cmd = button.path + extra;
-                execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
+                system(("/usr/bin/gnome-terminal -- " + button.path).c_str());
             }
             else
             {
-                execl("/bin/bash", "bash", "-c", button.path.c_str(), NULL);
+                system(button.path.c_str());
             }
             exit(1); // only reached if exec failed above
         }
