@@ -29,11 +29,17 @@ endif()
 
 set(BINFOLDER ${CMAKE_INSTALL_PREFIX}/bin)
 configure_file(resources/scriptpanel.desktop.in scriptpanel.desktop)
-
-add_executable(scriptpanel
-  src/main.cpp imgui/examples/imgui_impl_glfw.cpp imgui/examples/imgui_impl_opengl3.cpp
-  imgui/examples/libs/gl3w/GL/gl3w.c imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp
-  )
+include_directories(imgui/backends)
+include_directories(include)
+add_executable(scriptpanel src/main.cpp
+  imgui/imgui.cpp
+  imgui/imgui_draw.cpp
+  imgui/imgui_widgets.cpp
+  imgui/imgui_tables.cpp
+  imgui/backends/imgui_impl_glfw.cpp
+  imgui/backends/imgui_impl_opengl3.cpp
+  include/GL/gl3w.c
+)
 target_include_directories(scriptpanel
   PUBLIC imgui
   PUBLIC imgui/examples

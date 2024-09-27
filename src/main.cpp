@@ -369,7 +369,7 @@ int main(int argc, char** argv)
 
         {
             ImGuiViewport *viewport = ImGui::GetWindowViewport();
-            ImGuiID id = ImGui::DockSpaceOverViewport(viewport, ImGuiDockNodeFlags_AutoHideTabBar);
+            ImGuiID id = ImGui::DockSpaceOverViewport(0, viewport, ImGuiDockNodeFlags_AutoHideTabBar);
 
             // NOTE: remove tab bar
             ImGui::SetNextWindowDockID(id);
