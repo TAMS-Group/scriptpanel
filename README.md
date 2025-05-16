@@ -1,4 +1,5 @@
 # Scriptpanel
+
 A simple button gui for shell scripts.
 It will create a window with one button per executable `.sh` or `.py` script in the specified folder(default `~/scripts`). Each button's color will be randomized.
 A `scriptpanel.yaml` can be created in the scripts folder to assign different button labels and to provide tooltips.
