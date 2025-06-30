@@ -3,9 +3,9 @@ std::string wrappedString(std::string string, double width)
 {
     ImGuiStyle& style = ImGui::GetStyle();
     float button_width = width - style.FramePadding.x;
-    
+
     std::string result = "";
-    ImFont *font = ImGui::GetFont();
+    ImFontBaked *font = ImGui::GetFontBaked();
     const ImFontGlyph *glyph = font->FindGlyph((ImWchar)' ');
     double space_width = glyph->AdvanceX;
 
@@ -49,7 +49,7 @@ std::string wrappedString(std::string string, double width)
         else
         {
             double next_total_line_width = total_line_width + word_width + space_width;
-            
+
             if(next_total_line_width > button_width)
             {
                 if(button_width > total_line_width)
@@ -58,10 +58,10 @@ std::string wrappedString(std::string string, double width)
                     int num_spaces = (int)((d_width/space_width)/2.0);
                     line = std::string(num_spaces, ' ') + line;
                 }
-                
+
                 result += line + "\n";
                 line.clear();
-                
+
                 total_line_width = word_width;
                 line += w;
             }
@@ -75,7 +75,7 @@ std::string wrappedString(std::string string, double width)
     if(line.size() > 0)
     {
         if(button_width > total_line_width)
-        {        
+        {
             double d_width = button_width - total_line_width;
             int num_spaces = (int)((d_width/space_width)/2.0);
             line = std::string(num_spaces, ' ') + line;

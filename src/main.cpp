@@ -6,6 +6,7 @@
 #include "imgui_internal.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_impl_opengl3_loader.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +16,6 @@
 #include <fstream>
 #include <unordered_set>
 
-#include <GL/gl3w.h>
 #include <GLFW/glfw3.h>
 #include <fontconfig/fontconfig.h>
 #include <yaml-cpp/yaml.h>
@@ -88,7 +88,7 @@ GLFWwindow *initGlfwAndImgui(int width, int height, const char *window_name, Con
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    if (gl3wInit() != 0)
+    if (imgl3wInit() != 0)
     {
         fprintf(stderr, "Failed to initialize OpenGL loader!\n");
         exit(1);
@@ -287,7 +287,7 @@ void displayButton(Button button, int button_id, std::string group, ImVec2 butto
     int color = getButtonColor(button, group);
     ImGui::PushStyleColor(ImGuiCol_Button, color);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color + 0x00202020);
-    
+
     if(ImGui::Button(wrappedString(button.label, button_size.x).c_str(), button_size))
     {
         glfwMakeContextCurrent(NULL);
@@ -368,10 +368,9 @@ int main(int argc, char** argv)
         ImGui::NewFrame();
 
         {
-            ImGuiViewport *viewport = ImGui::GetWindowViewport();
-            ImGuiID id = ImGui::DockSpaceOverViewport(viewport, ImGuiDockNodeFlags_AutoHideTabBar);
-
             // NOTE: remove tab bar
+            ImGuiViewport *viewport = ImGui::GetWindowViewport();
+            ImGuiID id = ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID, viewport, ImGuiDockNodeFlags_AutoHideTabBar);
             ImGui::SetNextWindowDockID(id);
             ImGuiWindowClass wc;
             wc.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
