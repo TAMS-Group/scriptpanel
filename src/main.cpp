@@ -227,10 +227,26 @@ ParseFileResult ParseFile(std::string script_folder, std::unordered_set<std::str
                 if(scripts[i]["script"])
                 {
                     std::string filename = scripts[i]["script"].as<std::string>();
-                    button.path = script_folder + "/" + filename;
+
+                    if(button.label == default_label)
+                        button.label = filename;
+
+                    // check if file exists and is executable
+                    std::string candidate = script_folder + "/" + filename;
+                    if (access(candidate.c_str(), F_OK) != 0) {
+                        button.tooltip = std::string("Script '") + candidate + "'\nwas not found";
+                        button.path = "INVALID";
+                    }
+                    else if (access(candidate.c_str(), X_OK) != 0) {
+                        button.tooltip = std::string("Script '") + candidate + "'\nis not executable";
+                        button.path = "INVALID";
+                    }
+                    else {
+                        button.path = script_folder + "/" + filename;
+                    }
                     name_list.erase(filename);
                 }
-                if(scripts[i]["tooltip"])
+                if(scripts[i]["tooltip"] && button.tooltip == default_tooltip)
                     button.tooltip = scripts[i]["tooltip"].as<std::string>();
                 if(scripts[i]["terminal"])
                     button.keep_open = scripts[i]["terminal"].as<bool>();
@@ -288,25 +304,40 @@ void displayButton(Button button, int button_id, std::string group, ImVec2 butto
     ImGui::PushStyleColor(ImGuiCol_Button, color);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color + 0x00202020);
 
-    if(ImGui::Button(wrappedString(button.label, button_size.x).c_str(), button_size))
+    if (button.path == "INVALID")
     {
-        glfwMakeContextCurrent(NULL);
-        pid_t pid = fork();
-        if(pid==0)
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f); // Make the button semi-transparent
+        ImGui::Button(wrappedString(button.label, button_size.x).c_str(), button_size);
+        ImGui::PopStyleVar();
+
+        // Draw a line across the button to indicate it's invalid
+        ImVec2 p_min = ImGui::GetItemRectMin();
+        ImVec2 p_max = ImGui::GetItemRectMax();
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        draw_list->AddLine(p_min, p_max, IM_COL32(255, 0, 0, 255), 2.0f); // Red line
+    }
+    else
+    {
+        if (ImGui::Button(wrappedString(button.label, button_size.x).c_str(), button_size))
         {
-            if(button.keep_open)
+            glfwMakeContextCurrent(NULL);
+            pid_t pid = fork();
+            if(pid==0)
             {
-                std::string extra = "; exec bash";
-                std::string cmd = button.path + extra;
-                execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
+                if(button.keep_open)
+                {
+                    std::string extra = "; exec bash";
+                    std::string cmd = button.path + extra;
+                    execl("/usr/bin/gnome-terminal", "ControlpanelTerminal", "--" , "bash", "-c", cmd.c_str(), NULL);
+                }
+                else
+                {
+                    execl("/bin/bash", "bash", "-c", button.path.c_str(), NULL);
+                }
+                exit(1); // only reached if exec failed above
             }
-            else
-            {
-                execl("/bin/bash", "bash", "-c", button.path.c_str(), NULL);
-            }
-            exit(1); // only reached if exec failed above
+            glfwMakeContextCurrent(window);
         }
-        glfwMakeContextCurrent(window);
     }
     if(ImGui::IsItemHovered())
     {
