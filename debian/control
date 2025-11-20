@@ -1,0 +1,12 @@
+Source: scriptpanel
+Section: utils
+Priority: optional
+Maintainer: Michael Goerner <migoerner@constructor.university>
+Build-Depends: debhelper-compat (= 13), cmake, build-essential, libglfw3-dev, libyaml-cpp-dev, libfontconfig-dev
+Standards-Version: 4.6.2
+
+Package: scriptpanel
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: a simple button GUI
+ It maps a folder of scripts onto a set of buttons users can just press.
